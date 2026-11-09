@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>v2rayN · 本机流量</title>
+<style>
+:root{color-scheme:dark;--bg:#111315;--card:#1b1e20;--muted:#969da3;--line:#303638;--up:#c3e88d;--down:#8dcfe8}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#edf0ed;font:14px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}main{max-width:850px;margin:0 auto;padding:48px 28px}header{display:flex;justify-content:space-between;gap:20px;align-items:center;margin-bottom:36px}.eyebrow{font-size:11px;color:var(--muted);letter-spacing:2px}h1{font-size:27px;font-weight:560;letter-spacing:-.8px;margin:10px 0 0}.status{font-size:12px;border:1px solid var(--line);border-radius:20px;padding:9px 12px;white-space:nowrap;color:var(--muted)}.status:before{content:"";display:inline-block;width:6px;height:6px;background:#e2b574;border-radius:50%;margin-right:8px}.status.online:before{background:var(--up);box-shadow:0 0 9px #c3e88d55}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.card{border:1px solid var(--line);border-radius:16px;padding:24px;background:var(--card)}.label{color:var(--muted);font-size:12px}.speed{font-size:46px;font-weight:500;font-variant-numeric:tabular-nums;letter-spacing:-2px;margin:19px 0 24px}.speed small{font-size:15px;font-weight:400;letter-spacing:0;color:var(--muted);margin-left:7px}.up{color:var(--up)}.down{color:var(--down)}.row{display:flex;justify-content:space-between;align-items:baseline;gap:16px}.usage{border-top:1px solid var(--line);padding-top:18px}.amount{font-size:17px;font-variant-numeric:tabular-nums}.chart{margin-top:16px;padding-bottom:16px}.legend{display:flex;gap:16px;font-size:12px;color:var(--muted)}.legend i{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:5px}svg{width:100%;height:145px;display:block;margin-top:16px;overflow:visible}.axis{font:10px -apple-system,sans-serif;fill:var(--muted)}.timeline{color:var(--muted);font-size:10px;margin-top:3px}.summary{margin-top:24px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.summary .amount{display:block;margin-top:8px;font-size:22px}.direct{margin-top:26px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);display:flex;justify-content:space-between;font-size:12px;gap:16px;flex-wrap:wrap}footer{margin-top:24px;font-size:11px;line-height:1.9;color:var(--muted)}#notice{color:#e2b574;margin-top:14px;line-height:1.6;min-height:0}#notice:empty{display:none}strong{font-weight:500;color:#d4dad7}@media(max-width:550px){main{padding:28px 18px}header{align-items:flex-start}.card{padding:18px}.grid{gap:10px}.speed{font-size:32px;letter-spacing:-1px}.speed small{font-size:12px}.summary{grid-template-columns:1fr}.summary>div{display:flex;justify-content:space-between;align-items:center}.summary .amount{margin:0;font-size:18px}h1{font-size:23px}.status{font-size:11px;padding:8px}.row{gap:8px}}
+</style>
+<main>
+ <header><div><div class="eyebrow">V2RAYN / LOCAL MONITOR</div><h1>本机流量</h1></div><div id="status" class="status" role="status">连接中</div></header>
+ <div class="grid">
+  <section class="card"><div class="label"><span class="up">↑</span> 代理上传</div><div id="up" class="speed up">—<small>B/s</small></div><div class="row usage"><span class="label">今日上传</span><span class="amount" id="total-up">—</span></div></section>
+  <section class="card"><div class="label"><span class="down">↓</span> 代理下载</div><div id="down" class="speed down">—<small>B/s</small></div><div class="row usage"><span class="label">今日下载</span><span class="amount" id="total-down">—</span></div></section>
+ </div>
+ <section class="card chart"><div class="row"><span class="label">最近 60 秒</span><div class="legend"><span><i style="background:var(--up)"></i>上传</span><span><i style="background:var(--down)"></i>下载</span></div></div><svg viewBox="0 0 720 145" preserveAspectRatio="none" role="img" aria-label="最近60秒代理上传与下载速度曲线"><path d="M0 25H720 M0 75H720 M0 125H720" stroke="#303638" stroke-width="1"/><text id="scale" x="0" y="13" class="axis">等待采样</text><path id="down-line" fill="none" stroke="#8dcfe8" stroke-width="2" vector-effect="non-scaling-stroke"/><path id="up-line" fill="none" stroke="#c3e88d" stroke-width="2" vector-effect="non-scaling-stroke"/></svg><div class="row timeline"><span>60 秒前</span><span>现在</span></div></section>
+ <div class="summary"><div><span class="label">今日代理用量</span><span class="amount" id="today">—</span></div><div><span class="label">今日剩余额度</span><span class="amount" id="remaining">—</span></div><div><span class="label">最近更新</span><span class="amount" id="updated">—</span></div></div>
+ <div class="card" style="margin-top:24px"><div class="row"><span id="limit">每日限额</span><span id="percent">—</span></div><progress id="quota-progress" aria-label="每日流量限额使用比例" max="100" value="0" style="width:100%;height:8px;margin-top:16px;accent-color:var(--up)"></progress><p class="label" style="line-height:1.7;margin-bottom:0">每天 00:00 重新计数 · 达到限额的 80% / 95% / 100% 时由悬浮球弹窗提醒</p></div>
+ <div class="direct"><span>直连流量 · 单独统计</span><span id="direct-speed">↑ — &nbsp; ↓ —</span><span id="direct-total">累计 —</span></div>
+ <p id="notice" role="status"></p>
+ <footer>统计起点：<strong id="started">—</strong>，不包含此前历史。限额按十进制 GB 计算（1 GB = 10⁹ 字节）。<br>每秒读取 Xray 统计；今日限额计代理上传 + 下载，直连另列。已过日期的记录会保留；仅提醒，不自动断网。<br>数据只保存在本机 · 127.0.0.1</footer>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+function fmt(n,speed=false){if(!Number.isFinite(n))return ['—',speed?'B/s':'B'];const units=['B','KiB','MiB','GiB','TiB'];let k=0;while(n>=1024&&k<units.length-1){n/=1024;k++}return [n.toFixed(k===0?0:n>=100?0:1),units[k]+(speed?'/s':'')]}
+function amount(n){return fmt(n).join(' ')}
+function setSpeed(id,n){const [v,u]=fmt(n,true);$(id).replaceChildren(document.createTextNode(v));const unit=document.createElement('small');unit.textContent=u;$(id).append(unit)}
+function chart(history){const max=Math.max(1024,...history.flatMap(x=>[x.up,x.down]));$('scale').textContent=fmt(max,true).join(' ');for(const key of ['up','down']){const path=history.map((v,i)=>`${i?'L':'M'}${720*(60-history.length+i)/59},${125-100*v[key]/max}`).join(' ');$(key+'-line').setAttribute('d',path)}}
+const gb=n=>(n/1e9).toFixed(2)+' GB';
+async function update(){
+ try{
+  const r=await fetch('/api/stats',{cache:'no-store',signal:AbortSignal.timeout(3500)});if(!r.ok)throw Error('http');
+  const s=await r.json(),q=s.quota;
+  $('status').className='status'+(s.online?' online':'');$('status').textContent=s.online?'实时采集中':'等待客户端';
+  $('notice').textContent=!s.online?s.message:q.stage>=100?'今日流量已达到每日限额。':q.stage>=80?'今日流量接近每日限额，请留意剩余额度。':'';
+  for(const d of ['up','down']){setSpeed(d,s.speed.proxy[d]);$('total-'+d).textContent=gb(s.today.proxy[d])}
+  $('today').textContent=gb(q.used_bytes);$('remaining').textContent=gb(q.remaining_bytes);
+  $('limit').textContent=q.day+' · 每日限额 '+gb(q.limit_bytes);$('percent').textContent=q.percent.toFixed(1)+'%';
+  $('quota-progress').value=Math.min(100,q.percent);$('quota-progress').style.accentColor=q.stage>=95?'#ec8b8b':q.stage>=80?'#e2b574':'var(--up)';
+  $('updated').textContent=s.last_ok?new Date(s.last_ok*1000).toLocaleTimeString('zh-CN',{hour12:false}):'—';
+  $('started').textContent=new Date(s.started).toLocaleString('zh-CN',{hour12:false});
+  $('direct-speed').textContent='↑ '+fmt(s.speed.direct.up,true).join(' ')+'　 ↓ '+fmt(s.speed.direct.down,true).join(' ');
+  $('direct-total').textContent='今日 '+amount(s.today.direct.up+s.today.direct.down);chart(s.history);
+ }catch{$('status').className='status';$('status').textContent='采集器未连接';$('notice').textContent='请启动 v2rayN 以恢复采集。';setSpeed('up',0);setSpeed('down',0)}
+ finally{setTimeout(update,1000)}
+}update();
+</script>
+</html>

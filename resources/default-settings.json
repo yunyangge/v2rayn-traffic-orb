@@ -1,0 +1,8 @@
+{
+  "alert_percentages" : [
+    80,
+    95,
+    100
+  ],
+  "daily_limit_gb" : 80
+}

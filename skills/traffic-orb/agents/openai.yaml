@@ -1,0 +1,4 @@
+interface:
+  display_name: "Traffic Orb"
+  short_description: "安装、配置及排查 macOS v2rayN 流量球与每日限额提醒"
+  default_prompt: "使用 $traffic-orb 检查本机流量球，并帮我设置每日代理流量限额。"
