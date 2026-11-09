@@ -14,7 +14,7 @@ This record describes verification completed on 2026-11-09. It distinguishes loc
 | Process linkage | Local prototype followed real v2rayN startup/exit and kept daily counts | Distributable installer launchd binding has only the isolated script check above |
 | Privacy | Public source, release contents and decompressed collector scanned; compared against local private identifiers without printing them | No runtime logs, history, subscriptions or node credentials included; does not substitute for a complete security audit |
 | Intel | Build workflow and source path provided | No Intel release binary or real-device validation yet |
-| Cloud CI | Workflow exists | No successful hosted build recorded; v1.0.0 artifacts were built locally |
+| Cloud CI | Workflow exists | No successful hosted build recorded; v1.0.1 artifacts were built locally |
 | Signing | ad-hoc signature verification passed | No Apple Developer ID notarization |
 
 ## Reproduce the automated checks

@@ -53,7 +53,7 @@ Traffic Orb 读取 Xray 的本机统计接口。未开启统计、客户端未�
 
 | 你的 Mac | 下载方式 |
 |---|---|
-| Apple Silicon，M 系列芯片 | [TrafficOrb-macOS-arm64-v1.0.0.zip](https://github.com/yunyangge/v2rayn-traffic-orb/releases/download/v1.0.0/TrafficOrb-macOS-arm64-v1.0.0.zip) |
+| Apple Silicon，M 系列芯片 | [TrafficOrb-macOS-arm64-v1.0.1.zip](https://github.com/yunyangge/v2rayn-traffic-orb/releases/download/v1.0.1/TrafficOrb-macOS-arm64-v1.0.1.zip) |
 | Intel | 当前没有预编译附件；可按[源码构建](#开发与贡献)说明自行构建，尚未完成 Intel 实机验证 |
 
 解压 ZIP，双击 **`Install.command`**。安装器把 App 放到 `~/Applications/TrafficOrb.app`，并配置当前用户的启停监听，**无需管理员密码**。已有设置和流量记录保存在 App 之外，升级不会主动清空它们。
@@ -133,6 +133,7 @@ skill 不需要新的模型服务，不会给 App 增加外部上传；它也不
 | 分级预警 | 80% / 95% / 100% 弹窗和提示音，按天去重 |
 | 详细面板 | 最近 60 秒速度曲线，代理与直连分开显示 |
 | 启停联动 | 监听 v2rayN 进程，跟随启动和退出 |
+| 自动恢复采集 | 临时配置缺失时继续使用有效接口，必要时从运行中的 Xray 重新发现本机统计端口 |
 | 便携安装 | App 内置采集器，不要求接收者安装 Python |
 | AI 辅助 | 可选 Codex skill，支持配置与诊断 |
 | 数据保留 | 设置与历史存放在用户目录，不放在 App 包内 |
@@ -167,7 +168,7 @@ flowchart LR
 
 | 项目 | 当前状态 |
 |---|---|
-| Apple Silicon / arm64 | 已提供 v1.0.0 安装包；本地构建、独立运行时测试通过 |
+| Apple Silicon / arm64 | 已提供 v1.0.1 安装包；本地构建、独立运行时测试通过 |
 | Intel / x86_64 | 提供构建路径，当前无发布附件，尚未实机验证 |
 | macOS 最低版本 | 构建目标为 macOS 13；本地验证系统为 macOS 26.6 |
 | 计数、跨天与额度计算 | 10 项 Python 单元测试通过 |
@@ -253,5 +254,7 @@ BUILD_PYTHON="$PWD/.venv/bin/python" bash scripts/build.sh
 提交问题时请提供 macOS 版本、芯片类型、v2rayN 版本、所用核心和复现步骤。**不要上传节点地址、UUID、密码、订阅链接或完整配置。** 文档改动请保持中英文的功能与验证描述一致。
 
 首页的阅读顺序参考 [OverleafSkill](https://github.com/yunyangge/OverleafSkill)，示意图和内容按 Traffic Orb 的实际功能制作。
+
+[版本更新](CHANGELOG.md) · [许可范围说明](docs/licensing.md)
 
 MIT 许可证。第三方运行时许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。独立社区项目，与 v2rayN、Xray、Apple 或 OpenAI 无隶属关系。

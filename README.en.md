@@ -53,7 +53,7 @@ Choose a package from the [latest release](https://github.com/yunyangge/v2rayn-t
 
 | Mac | Download |
 |---|---|
-| Apple Silicon, M-series | [TrafficOrb-macOS-arm64-v1.0.0.zip](https://github.com/yunyangge/v2rayn-traffic-orb/releases/download/v1.0.0/TrafficOrb-macOS-arm64-v1.0.0.zip) |
+| Apple Silicon, M-series | [TrafficOrb-macOS-arm64-v1.0.1.zip](https://github.com/yunyangge/v2rayn-traffic-orb/releases/download/v1.0.1/TrafficOrb-macOS-arm64-v1.0.1.zip) |
 | Intel | No prebuilt attachment yet; [build from source](#development-and-contributions). Not tested on Intel hardware. |
 
 Unzip the package and double-click **`Install.command`**. It installs to `~/Applications/TrafficOrb.app` and registers a per-user lifecycle listener. **No administrator password is required.** Settings and usage live outside the app bundle.
@@ -133,6 +133,7 @@ No additional model service is added to the app. The skill does not automaticall
 | Alerts | Pop-ups and sound at 80%, 95%, 100%, deduplicated per day |
 | Dashboard | Last 60 seconds of rates; proxy and direct traffic shown separately |
 | Client lifecycle | Follows v2rayN startup and exit |
+| Automatic recovery | Reuses working metrics when generated configuration disappears, or rediscovers loopback listeners belonging to the running Xray process |
 | Packaged runtime | Users do not need an external Python installation |
 | AI assistance | Optional self-contained Codex skill |
 | Persistent data | Settings and history stored separately from the app |
@@ -167,7 +168,7 @@ The dashboard listens only on **`127.0.0.1:18863`** and checks the request Host.
 
 | Area | Current status |
 |---|---|
-| Apple Silicon / arm64 | v1.0.0 package available; local build and standalone runtime checks passed |
+| Apple Silicon / arm64 | v1.0.1 package available; local build and standalone runtime checks passed |
 | Intel / x86_64 | Build path provided; no release attachment or real-hardware validation yet |
 | Minimum macOS | Deployment target is macOS 13; local validation ran on macOS 26.6 |
 | Counters, date boundaries and quotas | Ten Python unit tests passed |
@@ -253,5 +254,7 @@ Outputs go to `dist/`, including the ZIP and SHA-256. The build checks the bundl
 For bug reports, provide macOS version, chip type, v2rayN version, core and reproduction steps. **Do not upload node addresses, UUIDs, passwords, subscriptions or full configuration files.** Keep capability and validation statements aligned across both READMEs.
 
 The homepage's reading order draws on [OverleafSkill](https://github.com/yunyangge/OverleafSkill). Illustrations and content reflect Traffic Orb's own capabilities.
+
+[Changelog](CHANGELOG.md) · [Licensing scope](docs/licensing.md)
 
 MIT licensed. Bundled runtime notices are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Independent community project; not affiliated with v2rayN, Xray, Apple or OpenAI.
