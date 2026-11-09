@@ -36,7 +36,8 @@ with tempfile.TemporaryDirectory() as tmp:
     process=subprocess.Popen([binary],env=env,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
     try:
         base=f'http://127.0.0.1:{port}'
-        for _ in range(100):
+        # First execution of a freshly signed macOS binary can include OS verification.
+        for _ in range(450):
             try:
                 result=json.load(op.open(base+'/api/stats',timeout=1))
                 if result['online'] and result['quota']['used_bytes']>=300: break
@@ -46,6 +47,12 @@ with tempfile.TemporaryDirectory() as tmp:
         else: raise AssertionError('Collector did not produce live metrics')
         assert result['quota']['used_bytes']==result['today']['proxy']['up']+result['today']['proxy']['down']
         assert result['quota']['limit_bytes']==80e9
+        used_before = result['quota']['used_bytes']
+        config.unlink()
+        time.sleep(1.3)
+        recovered = json.load(op.open(base+'/api/stats', timeout=2))
+        assert recovered['online'] and recovered['quota']['used_bytes'] > used_before
+        config.write_text(json.dumps({'metrics':{'listen':f'127.0.0.1:{fake.server_port}'}}))
         assert op.open(base).status==200
         try:
             op.open(urllib.request.Request(base,headers={'Host':'untrusted.invalid'}))
@@ -53,8 +60,9 @@ with tempfile.TemporaryDirectory() as tmp:
         except urllib.error.HTTPError as e: assert e.code==403
         diagnostic=json.loads(subprocess.check_output([binary,'--diagnose'],env=env))
         assert diagnostic['xray_metrics_enabled']
-        assert set(diagnostic)=={'config_found','xray_metrics_enabled','loopback_only'}
-        print('PASS: frozen runtime, fake metrics, separate traffic totals, persistence, HTML, Host protection, private diagnostics')
+        assert diagnostic['metrics_reachable']
+        assert set(diagnostic)=={'config_found','xray_metrics_enabled','metrics_reachable','loopback_only'}
+        print('PASS: frozen runtime, config removal recovery, traffic totals, persistence, HTML, Host protection, private diagnostics')
     finally:
         process.terminate(); process.wait(timeout=10)
         fake.shutdown()

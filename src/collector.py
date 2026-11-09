@@ -14,11 +14,13 @@ import threading
 import time
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from metric_source import MetricsSource
 
 ROOT = Path(os.environ.get('TRAFFIC_ORB_HOME', Path.home() / 'Library/Application Support/TrafficOrb'))
 ASSETS = Path(getattr(sys, '_MEIPASS', Path(__file__).resolve().parent.parent)) / ('assets' if getattr(sys, 'frozen', False) else 'resources')
 DATA = ROOT / 'data'
 CONFIG = Path(os.environ.get('TRAFFIC_ORB_CONFIG', Path.home() / 'Library/Application Support/v2rayN/binConfigs/config.json'))
+METRICS = MetricsSource(CONFIG)
 HTTP = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 LOCK = threading.Lock()
 STOP = threading.Event()
@@ -83,33 +85,7 @@ def delta(current, previous, same_process):
 
 
 def source():
-    config = json.loads(CONFIG.read_text())
-    metrics = config.get('metrics')
-    if not metrics:
-        raise ValueError('请在 v2rayN 参数设置中开启流量统计或实时速度。')
-    address = metrics.get('listen')
-    if not address:
-        inbound = next((i for i in config.get('inbounds', []) if i.get('tag') == metrics.get('tag')), None)
-        if not inbound:
-            raise ValueError('未找到 Xray 本地统计端口。')
-        address = f"127.0.0.1:{inbound['port']}"
-    host, port = address.rsplit(':', 1)
-    if host not in ('127.0.0.1', 'localhost', '[::1]'):
-        raise ValueError('只允许读取本机统计接口。')
-    pid = subprocess.check_output(['/usr/sbin/lsof', '-nP', f'-iTCP:{int(port)}', '-sTCP:LISTEN', '-Fp'], timeout=2, text=True)
-    identity = address + ':' + ','.join(line[1:] for line in pid.splitlines() if line.startswith('p'))
-    with HTTP.open('http://' + address + '/debug/vars', timeout=2) as response:
-        metrics = json.load(response)
-    outbound = metrics.get('stats', {}).get('outbound')
-    if not isinstance(outbound, dict):
-        raise ValueError('统计接口尚未准备好。')
-    counters = {'proxy': dict(ZERO), 'direct': dict(ZERO)}
-    for tag, counts in outbound.items():
-        group = 'proxy' if tag.startswith('proxy') else 'direct' if tag == 'direct' else None
-        if group:
-            for field, key in [('up', 'uplink'), ('down', 'downlink')]:
-                counters[group][field] += max(0, int(counts.get(key, 0)))
-    return identity, counters
+    return METRICS.read()
 
 
 def persist(state):
@@ -203,9 +179,16 @@ def main():
     if args.diagnose:
         try:
             config = json.loads(CONFIG.read_text())
-            print(json.dumps({'config_found': True, 'xray_metrics_enabled': bool(config.get('metrics')), 'loopback_only': True}))
+            found, enabled = True, bool(config.get('metrics'))
         except (OSError, ValueError):
-            print(json.dumps({'config_found': False, 'xray_metrics_enabled': False, 'loopback_only': True}))
+            found, enabled = False, False
+        try:
+            METRICS.read()
+            reachable = True
+        except (OSError, ValueError, subprocess.SubprocessError):
+            reachable = False
+        print(json.dumps({'config_found': found, 'xray_metrics_enabled': enabled or reachable,
+                          'metrics_reachable': reachable, 'loopback_only': True}))
         return
     ROOT.mkdir(parents=True, exist_ok=True, mode=0o700)
     if not (ROOT / 'settings.json').exists():

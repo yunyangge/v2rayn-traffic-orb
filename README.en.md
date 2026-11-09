@@ -151,7 +151,7 @@ flowchart LR
     A["Optional Codex skill"] -.->|"Configure and diagnose"| O
 ```
 
-The collector locates Xray's metrics port in the current user's v2rayN configuration, reads `/debug/vars`, and extracts byte counters for `proxy*` and `direct` outbounds. It does not forward proxy traffic, deploy VPS services or copy node settings into its own configuration.
+The collector first locates Xray's metrics port in the current user's v2rayN configuration. If the generated file is missing, it discovers loopback listeners belonging to the running v2rayN/Xray process. It reads `/debug/vars`, and extracts byte counters for `proxy*` and `direct` outbounds. It does not forward proxy traffic, deploy VPS services or copy node settings into its own configuration.
 
 The dashboard listens only on **`127.0.0.1:18863`** and checks the request Host. No external telemetry is provided. Release packages contain no user's node addresses, UUIDs, passwords, subscriptions, logs or historical traffic.
 
@@ -170,7 +170,7 @@ The dashboard listens only on **`127.0.0.1:18863`** and checks the request Host.
 | Apple Silicon / arm64 | v1.0.0 package available; local build and standalone runtime checks passed |
 | Intel / x86_64 | Build path provided; no release attachment or real-hardware validation yet |
 | Minimum macOS | Deployment target is macOS 13; local validation ran on macOS 26.6 |
-| Counters, date boundaries and quotas | Five Python unit tests passed |
+| Counters, date boundaries and quotas | Ten Python unit tests passed |
 | Standalone collector | End-to-end test with simulated Xray metrics; no real VPN required |
 | Install, uninstall and retention | Isolated filesystem checks passed; launchd calls were mocked |
 | Native menu, saving and reminders | Exercised through the local prototype's actual UI |

@@ -6,8 +6,10 @@ from pathlib import Path
 import tempfile
 import time
 import unittest
+import sys
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / 'src'))
 spec = importlib.util.spec_from_file_location('collector', ROOT / 'src/collector.py')
 c = importlib.util.module_from_spec(spec); spec.loader.exec_module(c)
 

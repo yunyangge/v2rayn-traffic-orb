@@ -6,7 +6,7 @@ This record describes verification completed on 2026-11-09. It distinguishes loc
 |---|---|---|
 | Native build | Swift UI and lifecycle helper compiled and code signatures verified | Apple Silicon, local macOS 26.6; deployment target macOS 13 |
 | Bundle layout | Packaged App `--check-package` found its bundled collector and created isolated per-user settings | Temporary application-data directory; no production settings overwritten |
-| Collector logic | Five `unittest` cases passed | Counter reset, thresholds, live quota update, midnight allocation, offline day change |
+| Collector logic | Ten `unittest` cases passed | Counter reset, thresholds, live quota update, midnight allocation, offline day change, missing generated config and endpoint rediscovery |
 | Standalone runtime | Frozen collector served metrics, dashboard and health endpoint against a fake Xray server | No real VPN required; Host rejection and diagnostics output checked |
 | Installation | App copying, paths with spaces, launch-agent plist generation, skill installation and uninstall checked | Temporary home directory; launchd was mocked, so this is not a clean-machine end-to-end installation |
 | Data preservation | Mock install/uninstall left existing usage data intact | Configuration files are outside the App bundle |
