@@ -5,6 +5,8 @@
 - `src/TrafficOrb.swift`：AppKit 悬浮球、独立右键菜单、限额设置、非阻塞提醒。
 - `src/Paths.swift`：运行目录、App 身份和端口。不要把构建机路径写入产品。
 - `src/collector.py`：读取 Xray 本机指标、计算差值并持久化日用量。PyInstaller 打包后无需外部 Python。
+- `src/proxy_guard.py`：可选代理流量保护，通过同一二进制的 `--guard` 模式运行。Xray 路由日志 + `nettop` 连接增量归属到来源任务，滚动一小时达到阈值后终止当前用户的进程。
+- `src/ProtectionPolicy.swift`：保护设置与状态的数据模型，设置写入独立的 `proxy-guard-settings.json`。
 - `src/LifecycleWatcher.swift`：观察 `2dust.v2rayN` 进程；登录后轻量驻留，不启动代理服务。
 - `resources/`：只有公共页面和默认设置，不能加入个人配置。
 
@@ -20,6 +22,10 @@ Xray 计数器重置或进程变化时重新基准；不能假定计数永远递
 
 测试/CI 应设置这些变量并使用假统计服务，不连接真实 VPN，不运行生产安装器。安装器另支持 `TRAFFIC_ORB_INSTALL_DIR`、`TRAFFIC_ORB_AGENT_DIR` 和 `--dry-run`。
 
+`--guard` 沿用相同的 HOME/CONFIG 覆盖；默认关闭，通过 `default-proxy-guard-settings.json` 初始化。守卫用文件锁避免重复运行，写出 `data/proxy-guard/guard.pid`；启停监听验证 PID 的命令后才停止它。公开安装不会开启 v2rayN 日志，用户需先配置有效的 Xray `log.access`。
+
+对代理归属没有证据时不终止。不要把所有本地代理连接都视为代理出口：其中仍可能走 `direct`。用户关闭保护后不发送新的终止信号，重新启动任务只有再次传输代理流量才会受到拦截。
+
 ## 检查
 
 ```bash
@@ -28,6 +34,8 @@ python3 scripts/privacy_check.py .
 ```
 
 `TrafficOrb.app/Contents/MacOS/TrafficOrbCollector --diagnose` 只输出配置是否存在、统计是否开启等布尔值，不打印节点详情。
+
+构建脚本还执行 `tests/smoke_guard.py`，用临时路由日志验证 frozen `--guard`、默认关闭、状态输出和单实例锁。单元测试使用合成流量数值和临时 `sleep` 子进程，不制造 GB 级网络流量。
 
 SDK 与 Swift 编译器必须匹配；如自动选择了更新 SDK，可通过 `SDKROOT` 指定已安装且匹配的 SDK。不要通过禁用证书检查解决网络错误。
 

@@ -112,7 +112,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var settingsPanel: NSPanel?
     var limitField: NSTextField?
     var limitError: NSTextField?
+    var protectionPanel: NSPanel?
+    var protectionSwitch: NSButton?
+    var protectionLimitField: NSTextField?
+    var protectionError: NSTextField?
+    var protectionStatus: ProtectionStatus?
     let root = Paths.supportRoot
+    let protectionRoot = Paths.supportRoot
     let endpoint = URL(string: "http://127.0.0.1:\(Paths.port)/api/stats")!
     lazy var session: URLSession = {
         let config = URLSessionConfiguration.ephemeral
@@ -126,6 +132,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             let alert = NSAlert(); alert.messageText = "无法创建 Traffic Orb 配置目录"
             alert.informativeText = error.localizedDescription; alert.runModal(); NSApp.terminate(nil); return
         }
+        Paths.ensureGuard()
         // Reopening the launcher brings the existing orb forward instead of duplicating it.
         let peers = NSRunningApplication.runningApplications(withBundleIdentifier: Bundle.main.bundleIdentifier!)
         if peers.contains(where: { $0.processIdentifier != ProcessInfo.processInfo.processIdentifier }) {
@@ -162,6 +169,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidBecomeActive(_ notification: Notification) {
         if let alertPanel, alertPanel.isVisible { alertPanel.makeKeyAndOrderFront(nil) }
         else if let settingsPanel, settingsPanel.isVisible { settingsPanel.makeKeyAndOrderFront(nil) }
+        else if let protectionPanel, protectionPanel.isVisible { protectionPanel.makeKeyAndOrderFront(nil) }
         else if let menuPanel, menuPanel.isVisible { menuPanel.makeKeyAndOrderFront(nil) }
         else { panel?.orderFrontRegardless() }
     }
@@ -182,8 +190,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     func makeMenu() -> NSMenu {
         let menu = NSMenu()
-        for (title, action) in [("显示 / 隐藏悬浮球", #selector(toggle)), ("回到右上角", #selector(resetPosition)), ("打开详细流量面板…", #selector(openDetails)), ("设置每日限额…", #selector(showLimitSettings))] {
+        for (title, action) in [("显示 / 隐藏悬浮球", #selector(toggle)), ("回到右上角", #selector(resetPosition)), ("打开详细流量面板…", #selector(openDetails)), ("设置每日限额…", #selector(showLimitSettings)), ("代理大流量保护…", #selector(showProtectionSettings))] {
             let item = NSMenuItem(title: title, action: action, keyEquivalent: ""); item.target = self; menu.addItem(item)
+            if action == #selector(showProtectionSettings) { item.state = readProtectionSettings(root: protectionRoot).enabled ? .on : .off }
         }
         menu.addItem(.separator())
         let info = NSMenuItem(title: "↑ 上传  ↓ 下载 · 底部为今日代理用量", action: nil, keyEquivalent: ""); info.isEnabled = false; menu.addItem(info)
@@ -208,28 +217,29 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         background.material = .popover; background.state = .active; background.blendingMode = .behindWindow
         background.wantsLayer = true; background.layer?.cornerRadius = 12; background.layer?.masksToBounds = true
         let title = NSTextField(labelWithString: "流量球")
-        title.font = .boldSystemFont(ofSize: 14); title.frame = NSRect(x: 18, y: 298, width: 180, height: 20)
+        title.font = .boldSystemFont(ofSize: 14); title.frame = NSRect(x: 18, y: frame.height - 34, width: 180, height: 20)
         background.addSubview(title)
         let quota = orb.sample?.quota
         let summary = NSTextField(labelWithString: quota.map { "今日 " + decimalGB($0.used_bytes) + " / " + decimalGB($0.limit_bytes) } ?? "正在连接统计接口…")
         summary.font = .systemFont(ofSize: 11); summary.textColor = .secondaryLabelColor
-        summary.frame = NSRect(x: 18, y: 275, width: 230, height: 18); background.addSubview(summary)
+        summary.frame = NSRect(x: 18, y: frame.height - 57, width: 230, height: 18); background.addSubview(summary)
         let close = NSButton(title: "×", target: self, action: #selector(closeContextMenu))
         close.isBordered = false; close.font = .systemFont(ofSize: 20)
-        close.setAccessibilityLabel("关闭菜单"); close.frame = NSRect(x: 224, y: 295, width: 25, height: 25)
+        close.setAccessibilityLabel("关闭菜单"); close.frame = NSRect(x: 224, y: frame.height - 37, width: 25, height: 25)
         background.addSubview(close)
         let items: [(String, Selector)] = [
             (panel.isVisible ? "隐藏悬浮球" : "显示悬浮球", #selector(toggle)),
             ("回到右上角", #selector(resetPosition)),
             ("打开详细流量面板…", #selector(openDetails)),
             ("设置每日限额…", #selector(showLimitSettings)),
+            (readProtectionSettings(root: protectionRoot).enabled ? "代理保护：已开启…" : "代理保护：已关闭…", #selector(showProtectionSettings)),
             ("测试限额提醒…", #selector(testAlert)),
             ("退出悬浮球", #selector(quit))
         ]
         for (index, item) in items.enumerated() {
             let button = NSButton(title: item.0, target: self, action: item.1)
             button.bezelStyle = .rounded; button.font = .systemFont(ofSize: 13)
-            button.frame = NSRect(x: 14, y: 228 - CGFloat(index) * 38, width: frame.width - 28, height: 31)
+            button.frame = NSRect(x: 14, y: frame.height - 104 - CGFloat(index) * 38, width: frame.width - 28, height: 31)
             background.addSubview(button)
         }
         popup.contentView = background; menuPanel = popup
@@ -241,6 +251,86 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func openDetails() { closeContextMenu(); NSWorkspace.shared.open(URL(string: "http://127.0.0.1:\(Paths.port)/")!) }
     @objc func quit() { NSApp.terminate(nil) }
     @objc func dismissAlert() { alertPanel?.close(); alertPanel = nil }
+    @objc func showProtectionSettings() {
+        closeContextMenu()
+        if let protectionPanel, protectionPanel.isVisible { protectionPanel.makeKeyAndOrderFront(nil); return }
+        refreshProtection()
+        let config = readProtectionSettings(root: protectionRoot)
+        let window = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 430, height: 360), styleMask: [.titled, .closable], backing: .buffered, defer: false)
+        window.title = "代理大流量保护"; window.isReleasedWhenClosed = false
+        window.level = .modalPanel; window.appearance = NSAppearance(named: .aqua)
+        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        let view = NSView(frame: NSRect(x: 0, y: 0, width: 430, height: 360))
+        let heading = NSTextField(labelWithString: "限制单个任务的代理流量")
+        heading.font = .boldSystemFont(ofSize: 17); heading.frame = NSRect(x: 24, y: 310, width: 382, height: 25)
+        let toggle = NSButton(checkboxWithTitle: "开启自动终止保护", target: nil, action: nil)
+        toggle.state = config.enabled ? .on : .off; toggle.frame = NSRect(x: 24, y: 268, width: 300, height: 25)
+        let label = NSTextField(labelWithString: "滚动 1 小时内，上传 + 下载达到")
+        label.font = .systemFont(ofSize: 13); label.frame = NSRect(x: 24, y: 225, width: 260, height: 22)
+        let field = NSTextField(string: limitNumber(config.limit_bytes / 1e9))
+        field.font = .monospacedDigitSystemFont(ofSize: 18, weight: .medium)
+        field.setAccessibilityLabel("每小时代理流量阈值，单位 GB")
+        field.frame = NSRect(x: 283, y: 220, width: 75, height: 30)
+        let unit = NSTextField(labelWithString: "GB")
+        unit.frame = NSRect(x: 370, y: 225, width: 40, height: 22)
+        let detail = NSTextField(wrappingLabelWithString: "仅统计 Xray 判定为代理的连接，普通直连不计入。\n达到阈值后终止来源进程；同一任务再次使用代理时，\n在 1 小时内继续拦截。已下载文件保留。")
+        detail.font = .systemFont(ofSize: 12); detail.textColor = .secondaryLabelColor
+        detail.frame = NSRect(x: 24, y: 143, width: 382, height: 63)
+        let fresh = protectionStatus.map { Date().timeIntervalSince1970 - $0.updated < 15 } ?? false
+        var state = fresh ? (protectionStatus?.route_error.isEmpty == true ? "路由识别正常" : "路由记录不可用，暂不自动终止") : "保护服务未连接"
+        if let top = protectionStatus?.top.first, fresh {
+            state += " · 当前最高 " + decimalGB(top.bytes)
+        }
+        let statusLine = NSTextField(wrappingLabelWithString: state)
+        statusLine.font = .systemFont(ofSize: 11); statusLine.textColor = fresh ? .secondaryLabelColor : .systemOrange
+        statusLine.frame = NSRect(x: 24, y: 99, width: 382, height: 32)
+        let error = NSTextField(labelWithString: "")
+        error.textColor = .systemRed; error.font = .systemFont(ofSize: 11)
+        error.frame = NSRect(x: 24, y: 62, width: 382, height: 27)
+        let cancel = NSButton(title: "取消", target: self, action: #selector(cancelProtectionSettings))
+        cancel.bezelStyle = .rounded; cancel.keyEquivalent = "\u{1b}"; cancel.frame = NSRect(x: 216, y: 20, width: 90, height: 32)
+        let save = NSButton(title: "保存", target: self, action: #selector(saveProtection))
+        save.bezelStyle = .rounded; save.keyEquivalent = "\r"; save.frame = NSRect(x: 318, y: 20, width: 90, height: 32)
+        for child in [heading, toggle, label, field, unit, detail, statusLine, error, cancel, save] as [NSView] { view.addSubview(child) }
+        protectionSwitch = toggle; protectionLimitField = field; protectionError = error
+        protectionPanel = window; window.contentView = view
+        window.center(); NSApp.activate(ignoringOtherApps: true); window.makeKeyAndOrderFront(nil)
+    }
+    @objc func cancelProtectionSettings() { protectionPanel?.close(); protectionPanel = nil }
+    @objc func saveProtection() {
+        do {
+            try saveProtectionSettings(root: protectionRoot, enabled: protectionSwitch?.state == .on, limit: protectionLimitField?.stringValue ?? "")
+            cancelProtectionSettings(); status.menu = makeMenu(); refreshProtection()
+        } catch { protectionError?.stringValue = error.localizedDescription }
+    }
+    func refreshProtection() {
+        let url = protectionRoot.appendingPathComponent("data/proxy-guard/status.json")
+        if let data = try? Data(contentsOf: url) {
+            protectionStatus = try? JSONDecoder().decode(ProtectionStatus.self, from: data)
+        }
+        let config = readProtectionSettings(root: protectionRoot)
+        let fresh = protectionStatus.map { Date().timeIntervalSince1970 - $0.updated < 15 } ?? false
+        let health = fresh && protectionStatus?.route_error.isEmpty == true
+        let text = config.enabled ? (health ? "代理保护：1 小时 " + limitNumber(config.limit_bytes / 1e9) + " GB" : "代理保护：等待服务或路由记录") : "代理保护：已关闭"
+        orb.toolTip = "代理流量 · 拖动移动 · 双击详情 · 右键菜单\n" + text
+        if let event = protectionStatus?.recent_events.last(where: { $0.event == "terminated" }),
+           event.time > UserDefaults.standard.double(forKey: "lastProtectionEvent") {
+            UserDefaults.standard.set(event.time, forKey: "lastProtectionEvent")
+            let now = Date().timeIntervalSince1970
+            if now - UserDefaults.standard.double(forKey: "lastProtectionNotice") < 30 { return }
+            UserDefaults.standard.set(now, forKey: "lastProtectionNotice")
+            let alert = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 420, height: 188), styleMask: [.titled, .closable], backing: .buffered, defer: false)
+            alert.title = "代理大流量保护已触发"; alert.isReleasedWhenClosed = false; alert.level = .modalPanel
+            let view = NSView(frame: NSRect(x: 0, y: 0, width: 420, height: 188))
+            let name = URL(fileURLWithPath: event.label ?? "任务").lastPathComponent
+            let message = NSTextField(wrappingLabelWithString: name + " 已停止。\n该任务的代理流量达到阈值，或仍处于拦截期。\n已下载文件保留，可在悬浮球菜单调整保护设置。")
+            message.frame = NSRect(x: 24, y: 66, width: 372, height: 92); message.font = .systemFont(ofSize: 13)
+            let button = NSButton(title: "知道了", target: self, action: #selector(dismissAlert))
+            button.bezelStyle = .rounded; button.frame = NSRect(x: 298, y: 20, width: 100, height: 32)
+            view.addSubview(message); view.addSubview(button); alert.contentView = view; alert.center()
+            alertPanel?.close(); alertPanel = alert; alert.orderFrontRegardless()
+        }
+    }
     func configuredDailyLimit() -> Double {
         if let data = try? Data(contentsOf: root.appendingPathComponent("settings.json")),
            let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -327,6 +417,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         do { try process.run() } catch { NSLog("Unable to start local collector: %@", error.localizedDescription) }
     }
     func poll() {
+        refreshProtection()
         guard !loading else { return }; loading = true
         session.dataTask(with: endpoint) { [weak self] data, response, error in
             let result = data.flatMap { try? JSONDecoder().decode(Sample.self, from: $0) }
@@ -356,6 +447,7 @@ struct TrafficOrbMain {
                 try Paths.prepare()
                 let ok = FileManager.default.isExecutableFile(atPath: Paths.collector.path)
                     && FileManager.default.fileExists(atPath: Paths.supportRoot.appendingPathComponent("settings.json").path)
+                    && FileManager.default.fileExists(atPath: Paths.supportRoot.appendingPathComponent("proxy-guard-settings.json").path)
                 print(ok ? "PASS: bundled collector and per-user settings" : "FAIL: incomplete app bundle")
                 if !ok { exit(1) }
             } catch { print("FAIL: unable to initialize per-user settings"); exit(1) }

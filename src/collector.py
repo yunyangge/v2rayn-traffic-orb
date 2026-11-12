@@ -175,7 +175,13 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', type=int, default=int(os.environ.get('TRAFFIC_ORB_PORT', '18863')))
     parser.add_argument('--diagnose', action='store_true', help='Print connection status without server names or credentials')
+    parser.add_argument('--guard', action='store_true', help='Run the optional proxy-only process guard')
     args = parser.parse_args()
+    if args.guard:
+        from proxy_guard import Guard
+        ROOT.mkdir(parents=True, exist_ok=True, mode=0o700)
+        Guard(ROOT / 'proxy-guard-settings.json').run()
+        return
     if args.diagnose:
         try:
             config = json.loads(CONFIG.read_text())

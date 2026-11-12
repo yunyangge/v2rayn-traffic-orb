@@ -20,6 +20,7 @@ final class LifecycleWatcher {
 
     func reconcile() {
         let current = Set(NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).filter { !$0.isTerminated }.map(\.processIdentifier))
+        if !current.isEmpty { try? Paths.prepare(); Paths.ensureGuard() }
         if !current.isEmpty && (previous.isEmpty || current != previous) {
             let config = NSWorkspace.OpenConfiguration()
             config.activates = false
@@ -34,20 +35,14 @@ final class LifecycleWatcher {
 
     func stopCompanions() {
         for app in NSRunningApplication.runningApplications(withBundleIdentifier: Paths.applicationID) { app.terminate() }
-        // Only signal the collector that belongs to this installation.
-        guard let raw = try? String(contentsOf: root.appendingPathComponent("data/server.pid"), encoding: .utf8),
-              let pid = Int32(raw.trimmingCharacters(in: .whitespacesAndNewlines)), pid > 1 else { return }
-        let check = Process(); let output = Pipe()
-        check.executableURL = URL(fileURLWithPath: "/bin/ps")
-        check.arguments = ["-p", String(pid), "-o", "args="]
-        check.standardOutput = output; check.standardError = FileHandle.nullDevice
-        do {
-            try check.run()
-            let data = output.fileHandleForReading.readDataToEndOfFile()
-            check.waitUntilExit()
-            let command = String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
-            if command.hasSuffix(Paths.collector.path) { kill(pid, SIGTERM) }
-        } catch { NSLog("Unable to inspect collector: %@", error.localizedDescription) }
+        // Match executable plus mode so unrelated reused PIDs are never signalled.
+        for (file, suffix) in [("data/server.pid", Paths.collector.path),
+                               ("data/proxy-guard/guard.pid", Paths.collector.path + " --guard")] {
+            guard let raw = try? String(contentsOf: root.appendingPathComponent(file), encoding: .utf8),
+                  let pid = Int32(raw.trimmingCharacters(in: .whitespacesAndNewlines)), pid > 1,
+                  Paths.processCommand(pid)?.hasSuffix(suffix) == true else { continue }
+            kill(pid, SIGTERM)
+        }
     }
 }
 

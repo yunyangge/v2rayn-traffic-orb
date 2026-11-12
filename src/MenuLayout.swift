@@ -2,7 +2,7 @@ import Cocoa
 
 func contextMenuFrame(anchor: NSRect, screen: NSRect) -> NSRect {
     let margin: CGFloat = 8
-    let size = NSSize(width: min(264, screen.width - 2 * margin), height: min(332, screen.height - 2 * margin))
+    let size = NSSize(width: min(264, screen.width - 2 * margin), height: min(370, screen.height - 2 * margin))
     let x = min(max(anchor.maxX - size.width, screen.minX + margin), screen.maxX - size.width - margin)
     let below = anchor.minY - size.height - 6
     let preferredY = below >= screen.minY + margin ? below : anchor.maxY + 6

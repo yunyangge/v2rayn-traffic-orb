@@ -31,6 +31,7 @@ It works with your existing v2rayN/Xray setup. **No server-side panel or VPS cha
 - [Quick start](#quick-start)
 - [Everyday controls](#everyday-controls)
 - [Daily limits and alerts](#daily-limits-and-alerts)
+- [Proxy traffic protection](#proxy-traffic-protection)
 - [Configure with Codex](#configure-with-codex)
 - [Features](#features)
 - [How it works and where data lives](#how-it-works-and-where-data-lives)
@@ -73,12 +74,15 @@ Right-click → **设置每日限额 / Set daily limit** → enter a GB value �
 
 ## Everyday controls
 
+The `main` branch includes the proxy guard described below (v1.1.0, unreleased). Existing v1.0.1 downloads only provide daily reminders; build from source to use the new feature.
+
 | Action | Result |
 |---|---|
 | Drag | Reposition and remember the location |
 | Double-click | Open the [local dashboard](http://127.0.0.1:18863/): rates, today's upload/download and remaining allowance |
 | Right-click | Open a separate menu panel that fits within the display |
 | Set daily limit | Save a new allowance; invalid values are rejected |
+| Proxy traffic protection | Opt into per-workload termination and set the rolling-hour proxy budget |
 | Return to top-right | Restore the default position |
 | Hide | Hide the orb while its process and collector keep running; restore it from the menu-bar waveform icon |
 | Preview alert / Option-click | Show sample values without changing usage or consuming real alert thresholds |
@@ -105,6 +109,20 @@ Each level alerts once per day. Restarting the app does not repeat an acknowledg
 - **Alert availability:** the orb process must be running. Hiding it is fine; quitting it stops pop-up reminders.
 
 Short sample intervals spanning midnight are divided proportionally between days. After a long collection gap, exact usage per day cannot be reconstructed. The last unsampled interval before an Xray restart may also be lost. These figures are for monitoring and can differ from network-interface, VPS or provider billing counters.
+
+## Proxy traffic protection
+
+Right-click the orb → **代理大流量保护 / Proxy traffic protection**. Public installations default to **off**. Once enabled, the default is **5 GB of proxy upload + download per workload over any rolling hour**. Multiple instances of the same script share a budget.
+
+Enable **Xray file logging / LogEnabled** in v2rayN first, then restart its core as required so its generated configuration points to a valid `log.access` file. Traffic Orb does not edit nodes, routing or logging settings. Missing routing evidence is shown in the settings panel and disables enforcement.
+
+- Only connections classified as `proxy*` in Xray's access log count. Ordinary direct traffic and traffic routed through Xray's `direct` outbound do not count.
+- At the threshold, the guard terminates the current user's source process and its children, escalating if necessary. Saved files are preserved; unsaved application work can be lost.
+- For one hour after triggering, renewed proxy use by that workload is terminated again. A direct-only restart remains allowed. The guard does not shut down Xray or v2rayN.
+- Accounting starts when monitoring begins and restores saved rolling history after a restart. Short-lived connections, sampling gaps and delayed log writes can be missed. This is not a zero-overshoot firewall or a billing limit.
+- While v2rayN runs, protection continues after closing the orb. The lifecycle helper stops it when v2rayN exits. Disable it at any time in the settings panel.
+
+Daily quota reminders remain independent. Guard events stay local. Xray access logs can contain destination domains; do not attach full logs to public issues.
 
 ## Configure with Codex
 
@@ -161,6 +179,8 @@ The dashboard listens only on **`127.0.0.1:18863`** and checks the request Host.
 | `~/Applications/TrafficOrb.app` | App, listener and standalone collector |
 | `~/Library/Application Support/TrafficOrb/settings.json` | Allowance and alert thresholds |
 | `~/Library/Application Support/TrafficOrb/data/usage.json` | Usage grouped by date |
+| `~/Library/Application Support/TrafficOrb/proxy-guard-settings.json` | Proxy protection switch and hourly threshold |
+| `~/Library/Application Support/TrafficOrb/data/proxy-guard/` | Rolling counts, status and termination events |
 | `~/Library/LaunchAgents/app.trafficorb.lifecycle.plist` | Per-user lifecycle registration |
 | `~/.codex/skills/traffic-orb` | Optional skill; overridden by `CODEX_HOME` |
 
@@ -171,7 +191,7 @@ The dashboard listens only on **`127.0.0.1:18863`** and checks the request Host.
 | Apple Silicon / arm64 | v1.0.1 package available; local build and standalone runtime checks passed |
 | Intel / x86_64 | Build path provided; no release attachment or real-hardware validation yet |
 | Minimum macOS | Deployment target is macOS 13; local validation ran on macOS 26.6 |
-| Counters, date boundaries and quotas | Ten Python unit tests passed |
+| Counters, date boundaries and quotas | 17 Python unit tests passed (including proxy protection) |
 | Standalone collector | End-to-end test with simulated Xray metrics; no real VPN required |
 | Install, uninstall and retention | Isolated filesystem checks passed; launchd calls were mocked |
 | Native menu, saving and reminders | Exercised through the local prototype's actual UI |
@@ -220,7 +240,7 @@ No. The installer manages this app and its lifecycle listener. Your existing cli
 
 ### Does the limit disconnect me? Are monthly limits supported?
 
-The quota only triggers reminders. The UI currently focuses on daily allowance and usage; there is no monthly quota setting. Date-based records are stored locally.
+The daily quota only triggers reminders. Separately enabling proxy traffic protection terminates over-budget workloads. The UI currently focuses on daily allowance and usage; there is no monthly quota setting. Date-based records are stored locally.
 
 ### Does midnight erase past usage?
 

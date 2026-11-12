@@ -11,9 +11,10 @@ APP="$STAGE/TrafficOrb.app"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$ROOT/dist"
 cp packaging/Info.plist "$APP/Contents/Info.plist"
 cp resources/default-settings.json "$APP/Contents/Resources/default-settings.json"
+cp resources/default-proxy-guard-settings.json "$APP/Contents/Resources/default-proxy-guard-settings.json"
 printf '%s\n' "$ARCH" > "$APP/Contents/Resources/architecture.txt"
 xcrun swiftc -sdk "$SDK" -target "$ARCH-apple-macosx13.0" -O \
-  src/Paths.swift src/QuotaPolicy.swift src/MenuLayout.swift src/TrafficOrb.swift \
+  src/Paths.swift src/QuotaPolicy.swift src/ProtectionPolicy.swift src/MenuLayout.swift src/TrafficOrb.swift \
   -framework Cocoa -o "$APP/Contents/MacOS/TrafficOrb"
 xcrun swiftc -sdk "$SDK" -target "$ARCH-apple-macosx13.0" -O \
   src/Paths.swift src/LifecycleWatcher.swift -framework Cocoa \
@@ -37,6 +38,7 @@ TEST_HOME="$(mktemp -d)"
 TRAFFIC_ORB_HOME="$TEST_HOME" "$APP/Contents/MacOS/TrafficOrb" --check-package
 rm -rf "$TEST_HOME"
 "$PYTHON" tests/smoke_release.py "$APP/Contents/MacOS/TrafficOrbCollector"
+"$PYTHON" tests/smoke_guard.py "$APP/Contents/MacOS/TrafficOrbCollector"
 "$PYTHON" scripts/privacy_check.py "$STAGE"
 /usr/bin/ditto -c -k --sequesterRsrc --keepParent "$STAGE" "$ROOT/dist/TrafficOrb-macOS-$ARCH-v$VERSION.zip"
 (cd dist && shasum -a 256 "TrafficOrb-macOS-$ARCH-v$VERSION.zip" > "TrafficOrb-macOS-$ARCH-v$VERSION.zip.sha256")
